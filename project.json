@@ -1,0 +1,21 @@
+{
+  "id": 15,
+  "title": "Smart Entryway Predictive Maintenance",
+  "repository_slug": "smart-entryway-predictive-maintenance",
+  "category": "Smart Home",
+  "platform": "Arduino Nano 33 IoT",
+  "platform_family": "arduino",
+  "difficulty": "Beginner",
+  "estimated_hours": 12,
+  "connectivity": "Local only",
+  "components": [
+    "door sensor",
+    "light sensor",
+    "RGB LED"
+  ],
+  "scope": "Build a smart home prototype that uses door sensor, light sensor, RGB LED to detect early signs of equipment problems. Include setup instructions, a circuit diagram, tested firmware, and sample output.",
+  "key_deliverable": "Predictive Maintenance demonstration with repeatable test steps",
+  "mode": "interactive_monitor",
+  "entrypoint": "firmware/smart-entryway-predictive-maintenance/smart-entryway-predictive-maintenance.ino",
+  "roadmap_source": "openmaker-2100-project-roadmap.xlsx"
+}

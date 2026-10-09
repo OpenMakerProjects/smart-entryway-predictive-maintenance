@@ -1,7 +1,3 @@
-__pycache__/
-*.py[cod]
-.env
-.vscode/
-.idea/
 .pio/
-build/
+__pycache__/
+*.pyc

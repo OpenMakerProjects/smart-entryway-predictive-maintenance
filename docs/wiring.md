@@ -1,17 +1,3 @@
-# Wiring guide
+# Wiring
 
-This is a low-voltage prototype wiring plan for **Smart Entryway Predictive Maintenance**. Confirm every module's datasheet because breakout-board pinouts vary.
-
-| Component | Suggested pin | Role | Check |
-| --- | --- | --- | --- |
-| door sensor | A3 | Analog input | Confirm the module voltage and pinout before power-up. |
-| light sensor | A0 | Analog input | Confirm the module voltage and pinout before power-up. |
-| RGB LED | 10 | Digital I/O | Confirm the module voltage and pinout before power-up. |
-| Status output | LED_BUILTIN | Output | Use a resistor when an external LED is fitted. |
-
-## Power
-
-- Use a regulated supply sized for the selected modules.
-- Join grounds unless an interface is explicitly isolated.
-- Do not connect mains voltage directly to a development board.
-- Add a fuse, emergency stop, and certified isolation where a real actuator can create risk.
+Follow [the editable circuit](circuit-diagram.svg). D2 to a normally closed reed contact, other contact GND. 3V3 to LDR, other LDR leg A0; 10kΩ A0 to GND. D5/D6/D9 through separate 330Ω resistors to red/green/blue anodes; common cathode GND. USB powers the Nano. No external 5V signal input.

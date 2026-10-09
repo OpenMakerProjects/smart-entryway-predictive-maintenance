@@ -1,107 +1,15 @@
 #include <Arduino.h>
-
-#ifndef LED_BUILTIN
-#define LED_BUILTIN 2
-#endif
-
-// Smart Entryway Predictive Maintenance
-// Roadmap project 15; mode: interactive_monitor
-constexpr uint8_t SENSOR_PINS[] = {A0, A1, A2};
-constexpr size_t SENSOR_COUNT = sizeof(SENSOR_PINS) / sizeof(SENSOR_PINS[0]);
-constexpr uint8_t OUTPUT_PIN = LED_BUILTIN;
-constexpr unsigned long SAMPLE_INTERVAL_MS = 1500UL;
-constexpr float TRIGGER_THRESHOLD = 0.60f;
-constexpr uint8_t REQUIRED_CONFIRMATIONS = 5;
-
-enum class SystemState : uint8_t { Starting, Normal, Active, Fault };
-
-struct Snapshot {
-  float values[SENSOR_COUNT];
-  float score;
-  bool valid;
-};
-
-SystemState state = SystemState::Starting;
-unsigned long lastSampleAt = 0;
-uint8_t confirmations = 0;
-bool outputActive = false;
-
-float normalizeReading(int raw) {
-  return constrain(raw / 1023.0f, 0.0f, 1.0f);
-}
-
-Snapshot acquireSnapshot() {
-  Snapshot snapshot{};
-  snapshot.valid = true;
-  float sum = 0.0f;
-  for (size_t index = 0; index < SENSOR_COUNT; ++index) {
-    const int raw = analogRead(SENSOR_PINS[index]);
-    if (raw < 0) snapshot.valid = false;
-    snapshot.values[index] = normalizeReading(raw);
-    sum += snapshot.values[index];
-  }
-  snapshot.score = sum / SENSOR_COUNT;
-  return snapshot;
-}
-
-bool decide(const Snapshot &snapshot) {
-  if (!snapshot.valid) return false;
-  const bool condition = snapshot.score >= TRIGGER_THRESHOLD;
-  if (!condition) {
-    confirmations = 0;
-  } else if (confirmations < REQUIRED_CONFIRMATIONS) {
-    confirmations += 1;
-  }
-  return confirmations >= REQUIRED_CONFIRMATIONS;
-}
-
-void applyOutput(bool requested, bool valid) {
-  if (!valid) {
-    outputActive = false;
-    state = SystemState::Fault;
-  } else {
-    outputActive = requested;
-    state = requested ? SystemState::Active : SystemState::Normal;
-  }
-  digitalWrite(OUTPUT_PIN, outputActive ? HIGH : LOW);
-}
-
-const char *stateName() {
-  switch (state) {
-    case SystemState::Starting: return "starting";
-    case SystemState::Normal: return "normal";
-    case SystemState::Active: return "active";
-    default: return "fault";
-  }
-}
-
-void publishTelemetry(const Snapshot &snapshot) {
-  Serial.print(R"json({"project_id":15,"mode":"interactive_monitor","state":")json");
-  Serial.print(stateName());
-  Serial.print(R"json(","score":)json");
-  Serial.print(snapshot.score, 3);
-  Serial.print(R"json(,"output":)json");
-  Serial.print(outputActive ? "true" : "false");
-  Serial.print(R"json(,"values":[)json");
-  for (size_t index = 0; index < SENSOR_COUNT; ++index) {
-    if (index) Serial.print(',');
-    Serial.print(snapshot.values[index], 3);
-  }
-  Serial.println("]}");
-}
-
-void setup() {
-  pinMode(OUTPUT_PIN, OUTPUT);
-  digitalWrite(OUTPUT_PIN, LOW);
-  Serial.begin(115200);
-  state = SystemState::Normal;
-}
-
-void loop() {
-  const unsigned long now = millis();
-  if (now - lastSampleAt < SAMPLE_INTERVAL_MS) return;
-  lastSampleAt = now;
-  const Snapshot snapshot = acquireSnapshot();
-  applyOutput(decide(snapshot), snapshot.valid);
-  publishTelemetry(snapshot);
+#include "../maintenance.h"
+#include <cstring>
+Maintenance monitor; uint32_t printed=0; char line[16];size_t used=0;
+void setup(){pinMode(2,INPUT_PULLUP);pinMode(5,OUTPUT);pinMode(6,OUTPUT);pinMode(9,OUTPUT);analogReadResolution(10);Serial.begin(115200);}
+void loop(){
+ uint32_t now=millis();monitor.update(now,digitalRead(2)==HIGH,analogRead(A0));
+ while(Serial.available()){char c=Serial.read();if(c=='\n'){line[used]=0;if(!strcmp(line,"RESET")){Serial.println(monitor.reset()?"reset accepted":"reset denied: close door");}used=0;}else if(c!='\r'){if(used<sizeof(line)-1)line[used++]=c;else used=0;}}
+ const char* s=monitor.state(now);
+ analogWrite(5,!strcmp(s,"invalid")?180:(!strcmp(s,"service")?160:0));
+ analogWrite(6,!strcmp(s,"healthy")?120:(!strcmp(s,"service")?70:0));
+ analogWrite(9,!strcmp(s,"dark")?120:0);
+ if(uint32_t(now-printed)>=2000){printed=now;Serial.print("{\"ms\":");Serial.print(now);Serial.print(",\"open\":");Serial.print(monitor.open?"true":"false");Serial.print(",\"cycles\":");Serial.print(monitor.cycles);Serial.print(",\"light_adc\":");Serial.print(monitor.light);Serial.print(",\"state\":\"");Serial.print(s);Serial.println("\"}");}
+ delay(10);
 }
